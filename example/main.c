@@ -56,8 +56,14 @@
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 
-#include "hdc1080.h"
 #include "transfer_handler.h"
+#include "SparkFunMPU9250-DMP.h"
+
+unsigned long stepCount = 0;
+unsigned long stepTime = 0;
+unsigned long lastStepCount = 0;
+
+extern int ax, ay, az;
 
 /**
  * @brief Function for main application entry.
@@ -70,23 +76,29 @@ int main(void)
     NRF_LOG_INFO("\r\nTWI sensor example started.");
     NRF_LOG_FLUSH();
 	
-	iic_init();
-	uint16_t id = hdc1080_readDeviceId();
-	
-	hdc1080_begin(HDC1080_CONF_HRES_14BIT | HDC1080_CONF_TRES_14BIT);
-	
-	NRF_LOG_INFO("id%x",id);
-	
-	nrf_delay_ms(500);
+		iic_init();
+		MPU9250_DMP_begin();
+		MPU9250_DMP_setSensors(INV_XYZ_GYRO | INV_XYZ_ACCEL | INV_XYZ_COMPASS);
+		MPU9250_DMP_setGyroFSR(2000); // Set gyro to 2000 dps
+		MPU9250_DMP_setAccelFSR(2); // Set accel to +/-2g
+		MPU9250_DMP_setLPF(500); // Set LPF corner frequency to 5Hz
+		MPU9250_DMP_setSampleRate(1000); // Set sample rate to 10Hz
+		MPU9250_DMP_setCompassSampleRate(10); // Set mag rate to 10Hz
 	
 
     while (true)
     {
 			
-			NRF_LOG_INFO("temp:%d", hdc1080_readTemperature()*100);
-			NRF_LOG_INFO("humi:%d", hdc1080_readHumidity()*100);
-			nrf_delay_ms(500);
-        NRF_LOG_FLUSH();
+			if(MPU9250_DMP_dataReady())
+			{
+					MPU9250_DMP_update(UPDATE_ACCEL | UPDATE_GYRO | UPDATE_COMPASS);
+					float res = MPU9250_DMP_calcAccel(az);
+					NRF_LOG_INFO("%d", res*100);
+			
+			
+			}
+			NRF_LOG_FLUSH();
+			
     }
 }
 
